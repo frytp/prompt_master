@@ -41,9 +41,23 @@ class PromptListView(ListView):
             queryset = queryset.filter(tags__id=tag_id)
         
         return queryset
+        
 class PromptDetailView(DetailView):
     """Display detailed view of a prompt."""
     
     model = Prompt
     template_name = 'prompts/prompt_detail.html'
     context_object_name = 'prompt'
+    
+class PromptCreateView(CreateView):
+    """Create new prompt."""
+    
+    model = Prompt
+    form_class = PromptForm
+    template_name = 'prompts/prompt_form.html'
+    success_url = reverse_lazy('prompt_list')
+    
+    def form_valid(self, form):
+        """Handle successful form submission."""
+        messages.success(self.request, 'Промпт успешно создан!')
+        return super().form_valid(form)
