@@ -9,6 +9,8 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from .models import Prompt
 from .forms import PromptForm
+from django.shortcuts import redirect
+
 
 
 class PromptListView(ListView):
