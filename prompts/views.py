@@ -61,3 +61,42 @@ class PromptCreateView(CreateView):
         """Handle successful form submission."""
         messages.success(self.request, 'Промпт успешно создан!')
         return super().form_valid(form)
+        
+class PromptUpdateView(UpdateView):
+    """Update existing prompt."""
+    
+    model = Prompt
+    form_class = PromptForm
+    template_name = 'prompts/prompt_form.html'
+    
+    def get_success_url(self):
+        """Redirect to detail view after update."""
+        return reverse_lazy('prompt_detail', kwargs={'pk': self.object.pk})
+    
+    def form_valid(self, form):
+        """Handle successful form submission."""
+        messages.success(self.request, 'Промпт успешно обновлен!')
+        return super().form_valid(form)
+
+class PromptDeleteView(DeleteView):
+    """Delete prompt."""
+    
+    model = Prompt
+    template_name = 'prompts/prompt_confirm_delete.html'
+    success_url = reverse_lazy('prompt_list')
+    
+    def get(self, request, *args, **kwargs):
+        """Check if prompt can be deleted."""
+        self.object = self.get_object()
+        if self.object.is_default:
+            messages.error(
+                request,
+                'Невозможно удалить предустановленный промпт'
+            )
+            return redirect('prompt_detail', pk=self.object.pk)
+        return super().get(request, *args, **kwargs)
+    
+    def delete(self, request, *args, **kwargs):
+        """Handle deletion."""
+        messages.success(request, 'Промпт успешно удален')
+        return super().delete(request, *args, **kwargs)

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}Удалить промпт - Prompt Manager{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Подтверждение удаления</h5>
+            </div>
+            <div class="card-body">
+                <p>Вы уверены, что хотите удалить промпт:</p>
+                <h5 class="text-center my-3">{{ object.title }}</h5>
+                <p class="text-muted">Это действие нельзя отменить!</p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'prompt_detail' object.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Удалить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
