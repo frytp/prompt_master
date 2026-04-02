@@ -41,3 +41,9 @@ class PromptListView(ListView):
             queryset = queryset.filter(tags__id=tag_id)
         
         return queryset
+class PromptDetailView(DetailView):
+    """Display detailed view of a prompt."""
+    
+    model = Prompt
+    template_name = 'prompts/prompt_detail.html'
+    context_object_name = 'prompt'
