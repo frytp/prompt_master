@@ -14,7 +14,7 @@ from django.shortcuts import redirect
 
 
 class PromptListView(ListView):
-    """Display list of all prompts."""
+    """Display paginated list of prompts with search and filters."""
     
     model = Prompt
     template_name = 'prompts/prompt_list.html'
@@ -22,28 +22,46 @@ class PromptListView(ListView):
     paginate_by = 12
     
     def get_queryset(self):
-        """Get queryset with optional filtering."""
-        queryset = Prompt.objects.select_related('category').prefetch_related(
-            'tags', 'ai_models'
+        """
+        Get optimized queryset with search and filtering.
+        
+        Returns:
+            QuerySet: Filtered and optimized prompt queryset
+        """
+        base_queryset = Prompt.objects.select_related(
+            'category'
+        ).prefetch_related(
+            'tags', 
+            'ai_models'
         )
         
         # Search by title
-        search = self.request.GET.get('search')
-        if search:
-            queryset = queryset.filter(title__icontains=search)
+        search_term = self.request.GET.get('search', '').strip()
+        if search_term:
+            base_queryset = base_queryset.filter(
+                title__icontains=search_term
+            )
         
         # Filter by category
-        category_id = self.request.GET.get('category')
-        if category_id:
-            queryset = queryset.filter(category_id=category_id)
+        cat_id = self.request.GET.get('category')
+        if cat_id:
+            base_queryset = base_queryset.filter(category_id=cat_id)
         
         # Filter by tag
         tag_id = self.request.GET.get('tag')
         if tag_id:
-            queryset = queryset.filter(tags__id=tag_id)
+            base_queryset = base_queryset.filter(tags__id=tag_id)
         
-        return queryset
-        
+        return base_queryset
+    
+    def get_context_data(self, **kwargs):
+        """Add filter options to context."""
+        context = super().get_context_data(**kwargs)
+        context['categories'] = Category.objects.all()
+        context['tags'] = Tag.objects.all()
+        return context
+
+
 class PromptDetailView(DetailView):
     """Display detailed view of a prompt."""
     
