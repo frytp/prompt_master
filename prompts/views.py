@@ -1,16 +1,17 @@
-from django.shortcuts import render
-
-# Create your views here.
-"""
-Views for Prompt Manager application.
-"""
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import (
+    ListView, 
+    DetailView, 
+    CreateView, 
+    UpdateView, 
+    DeleteView,
+    FormView
+)
 from django.urls import reverse_lazy
 from django.contrib import messages
-from .models import Prompt
-from .forms import PromptForm
 from django.shortcuts import redirect
-
+import json
+from .models import Prompt, Category, Tag, AIModel
+from .forms import PromptForm, ImportPromptsForm
 
 
 class PromptListView(ListView):
@@ -22,12 +23,7 @@ class PromptListView(ListView):
     paginate_by = 12
     
     def get_queryset(self):
-        """
-        Get optimized queryset with search and filtering.
-        
-        Returns:
-            QuerySet: Filtered and optimized prompt queryset
-        """
+        """Get optimized queryset with search and filtering."""
         base_queryset = Prompt.objects.select_related(
             'category'
         ).prefetch_related(
@@ -63,14 +59,15 @@ class PromptListView(ListView):
 
 
 class PromptDetailView(DetailView):
-    """Display detailed view of a prompt."""
+    """Display detailed view of a single prompt."""
     
     model = Prompt
     template_name = 'prompts/prompt_detail.html'
     context_object_name = 'prompt'
-    
+
+
 class PromptCreateView(CreateView):
-    """Create new prompt."""
+    """Handle creation of new prompts."""
     
     model = Prompt
     form_class = PromptForm
@@ -78,45 +75,108 @@ class PromptCreateView(CreateView):
     success_url = reverse_lazy('prompt_list')
     
     def form_valid(self, form):
-        """Handle successful form submission."""
+        """Process valid form and show success message."""
         messages.success(self.request, 'Промпт успешно создан!')
         return super().form_valid(form)
-        
+
+
 class PromptUpdateView(UpdateView):
-    """Update existing prompt."""
+    """Handle updates to existing prompts."""
     
     model = Prompt
     form_class = PromptForm
     template_name = 'prompts/prompt_form.html'
     
     def get_success_url(self):
-        """Redirect to detail view after update."""
+        """Generate URL to redirect after successful update."""
         return reverse_lazy('prompt_detail', kwargs={'pk': self.object.pk})
     
     def form_valid(self, form):
-        """Handle successful form submission."""
+        """Process valid form and show success message."""
         messages.success(self.request, 'Промпт успешно обновлен!')
         return super().form_valid(form)
 
+
 class PromptDeleteView(DeleteView):
-    """Delete prompt."""
+    """Handle prompt deletion with protection for default prompts."""
     
     model = Prompt
     template_name = 'prompts/prompt_confirm_delete.html'
     success_url = reverse_lazy('prompt_list')
     
     def get(self, request, *args, **kwargs):
-        """Check if prompt can be deleted."""
-        self.object = self.get_object()
-        if self.object.is_default:
+        """Prevent deletion of default prompts."""
+        prompt_to_delete = self.get_object()
+        if prompt_to_delete.is_default:
             messages.error(
                 request,
-                'Невозможно удалить предустановленный промпт'
+                'Невозможно удалить предустановленный промпт!'
             )
-            return redirect('prompt_detail', pk=self.object.pk)
+            return redirect('prompt_detail', pk=prompt_to_delete.pk)
         return super().get(request, *args, **kwargs)
     
     def delete(self, request, *args, **kwargs):
-        """Handle deletion."""
-        messages.success(request, 'Промпт успешно удален')
+        """Delete prompt and show confirmation message."""
+        messages.success(request, 'Промпт успешно удален!')
         return super().delete(request, *args, **kwargs)
+
+
+class ImportPromptsView(FormView):
+    """Handle importing prompts from JSON file."""
+    
+    template_name = 'prompts/import_prompts.html'
+    form_class = ImportPromptsForm
+    success_url = reverse_lazy('prompt_list')
+    
+    def form_valid(self, form):
+        """Process valid form and import prompts."""
+        json_file = form.cleaned_data['json_file']
+        
+        try:
+            # Read and parse JSON
+            file_content = json_file.read().decode('utf-8')
+            prompts_data = json.loads(file_content)
+            
+            imported = 0
+            
+            for item in prompts_data:
+                # Create or get category
+                cat_name = item.get('category', 'Без категории')
+                category, _ = Category.objects.get_or_create(
+                    name=cat_name,
+                    defaults={'description': f'Категория {cat_name}'}
+                )
+                
+                # Create prompt
+                prompt = Prompt.objects.create(
+                    title=item['title'],
+                    content=item['content'],
+                    category=category
+                )
+                
+                # Add tags
+                if 'tags' in item:
+                    for tag_name in item['tags']:
+                        tag, _ = Tag.objects.get_or_create(name=tag_name)
+                        prompt.tags.add(tag)
+                
+                # Add AI models
+                if 'ai_models' in item:
+                    for model_name in item['ai_models']:
+                        model, _ = AIModel.objects.get_or_create(name=model_name)
+                        prompt.ai_models.add(model)
+                
+                imported += 1
+            
+            messages.success(
+                self.request,
+                f'Успешно импортировано промптов: {imported}'
+            )
+            
+        except Exception as e:
+            messages.error(
+                self.request,
+                f'Ошибка при импорте: {str(e)}'
+            )
+        
+        return super().form_valid(form)
