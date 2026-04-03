@@ -137,42 +137,74 @@ class ImportPromptsView(FormView):
             file_content = json_file.read().decode('utf-8')
             prompts_data = json.loads(file_content)
             
-            imported = 0
+            imported_count = 0
+            skipped_count = 0
             
             for item in prompts_data:
-                # Create or get category
-                cat_name = item.get('category', 'Без категории')
-                category, _ = Category.objects.get_or_create(
-                    name=cat_name,
-                    defaults={'description': f'Категория {cat_name}'}
-                )
-                
-                # Create prompt
-                prompt = Prompt.objects.create(
-                    title=item['title'],
-                    content=item['content'],
-                    category=category
-                )
-                
-                # Add tags
-                if 'tags' in item:
-                    for tag_name in item['tags']:
-                        tag, _ = Tag.objects.get_or_create(name=tag_name)
-                        prompt.tags.add(tag)
-                
-                # Add AI models
-                if 'ai_models' in item:
-                    for model_name in item['ai_models']:
-                        model, _ = AIModel.objects.get_or_create(name=model_name)
-                        prompt.ai_models.add(model)
-                
-                imported += 1
+                try:
+                    # Validate required fields
+                    if 'title' not in item or 'content' not in item:
+                        skipped_count += 1
+                        continue
+                    
+                    # Create or get category
+                    category_name = item.get('category', 'Без категории')
+                    category, _ = Category.objects.get_or_create(
+                        name=category_name,
+                        defaults={
+                            'description': f'Категория {category_name}',
+                            'color': '#3498db'
+                        }
+                    )
+                    
+                    # Create prompt
+                    prompt = Prompt.objects.create(
+                        title=item['title'],
+                        content=item['content'],
+                        category=category
+                    )
+                    
+                    # Add tags
+                    if 'tags' in item and isinstance(item['tags'], list):
+                        for tag_name in item['tags']:
+                            tag, _ = Tag.objects.get_or_create(
+                                name=tag_name,
+                                defaults={'description': f'Тег {tag_name}'}
+                            )
+                            prompt.tags.add(tag)
+                    
+                    # Add AI models
+                    if 'ai_models' in item and isinstance(item['ai_models'], list):
+                        for model_name in item['ai_models']:
+                            model, _ = AIModel.objects.get_or_create(
+                                name=model_name,
+                                defaults={'description': f'AI модель {model_name}'}
+                            )
+                            prompt.ai_models.add(model)
+                    
+                    imported_count += 1
+                    
+                except Exception as e:
+                    skipped_count += 1
+                    continue
             
-            messages.success(
+            # Show result message
+            if imported_count > 0:
+                messages.success(
+                    self.request,
+                    f'Успешно импортировано промптов: {imported_count}'
+                )
+            if skipped_count > 0:
+                messages.warning(
+                    self.request,
+                    f'Пропущено промптов: {skipped_count}'
+                )
+            
+        except json.JSONDecodeError:
+            messages.error(
                 self.request,
-                f'Успешно импортировано промптов: {imported}'
+                'Ошибка: неверный формат JSON файла'
             )
-            
         except Exception as e:
             messages.error(
                 self.request,
