@@ -1,0 +1,121 @@
+[
+  {
+    "model": "prompts.category",
+    "pk": 1,
+    "fields": {
+      "name": "Образование",
+      "description": "Промпты для обучения и объяснения сложных тем",
+      "color": "#3498db"
+    }
+  },
+  {
+    "model": "prompts.category",
+    "pk": 2,
+    "fields": {
+      "name": "Программирование",
+      "description": "Промпты для разработки и анализа кода",
+      "color": "#2ecc71"
+    }
+  },
+  {
+    "model": "prompts.category",
+    "pk": 3,
+    "fields": {
+      "name": "Творчество",
+      "description": "Промпты для генерации креативного контента",
+      "color": "#e74c3c"
+    }
+  },
+  {
+    "model": "prompts.tag",
+    "pk": 1,
+    "fields": {
+      "name": "объяснение",
+      "description": "Подробное разъяснение тем"
+    }
+  },
+  {
+    "model": "prompts.tag",
+    "pk": 2,
+    "fields": {
+      "name": "примеры",
+      "description": "Использование конкретных примеров"
+    }
+  },
+  {
+    "model": "prompts.tag",
+    "pk": 3,
+    "fields": {
+      "name": "код",
+      "description": "Работа с программным кодом"
+    }
+  },
+  {
+    "model": "prompts.tag",
+    "pk": 4,
+    "fields": {
+      "name": "креатив",
+      "description": "Творческий подход"
+    }
+  },
+  {
+    "model": "prompts.aimodel",
+    "pk": 1,
+    "fields": {
+      "name": "ChatGPT",
+      "version": "4",
+      "description": "OpenAI ChatGPT"
+    }
+  },
+  {
+    "model": "prompts.aimodel",
+    "pk": 2,
+    "fields": {
+      "name": "Claude",
+      "version": "3.5",
+      "description": "Anthropic Claude"
+    }
+  },
+  {
+    "model": "prompts.aimodel",
+    "pk": 3,
+    "fields": {
+      "name": "Gemini",
+      "version": "Pro",
+      "description": "Google Gemini"
+    }
+  },
+  {
+    "model": "prompts.prompt",
+    "pk": 1,
+    "fields": {
+      "title": "Объяснение сложных концепций",
+      "content": "Объясни [концепцию] простыми словами, используя аналогии из повседневной жизни. Структурируй ответ:\n1. Краткое определение\n2. Зачем это нужно\n3. Примеры из реальной жизни\n4. Распространенные заблуждения\n5. Практическое применение",
+      "category": 1,
+      "is_default": true,
+      "usage_count": 0
+    }
+  },
+  {
+    "model": "prompts.prompt",
+    "pk": 2,
+    "fields": {
+      "title": "Code Review и улучшение",
+      "content": "Проведи ревью следующего кода и предложи улучшения в следующих аспектах:\n- Читаемость и стиль\n- Производительность\n- Безопасность\n- Best practices\n- Возможные баги\n\nКод:\n[вставить код здесь]",
+      "category": 2,
+      "is_default": true,
+      "usage_count": 0
+    }
+  },
+  {
+    "model": "prompts.prompt",
+    "pk": 3,
+    "fields": {
+      "title": "Генерация креативных идей",
+      "content": "Сгенерируй 5 оригинальных идей для [тип проекта] на тему [тема]. Для каждой идеи укажи:\n- Название\n- Описание (3-4 предложения)\n- Уникальную особенность\n- Целевую аудиторию\n- Возможные сложности реализации",
+      "category": 3,
+      "is_default": true,
+      "usage_count": 0
+    }
+  }
+]
