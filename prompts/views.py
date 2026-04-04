@@ -12,7 +12,7 @@ from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404
 from django.http import JsonResponse
 import json
-from .models import Prompt, Category, Tag, AIModel
+from .models import Prompt, Category, Tag, AIModel, Collection
 from .forms import PromptForm, ImportPromptsForm
 
 
@@ -27,7 +27,7 @@ class PromptListView(ListView):
     def get_queryset(self):
         """Get optimized queryset with search and filtering."""
         base_queryset = Prompt.objects.select_related(
-            'category'
+            'category', 'collection'
         ).prefetch_related(
             'tags', 
             'ai_models'
@@ -50,6 +50,16 @@ class PromptListView(ListView):
         if tag_id:
             base_queryset = base_queryset.filter(tags__id=tag_id)
         
+        # Filter by collection
+        collection_id = self.request.GET.get('collection')
+        if collection_id:
+            base_queryset = base_queryset.filter(collection_id=collection_id)
+        
+        # Filter favorites
+        show_favorites = self.request.GET.get('favorites')
+        if show_favorites:
+            base_queryset = base_queryset.filter(is_favorite=True)
+        
         # Sorting
         sort_by = self.request.GET.get('sort', '-created_at')
         if sort_by in ['-created_at', 'created_at', '-usage_count', 'usage_count', 'title']:
@@ -62,6 +72,7 @@ class PromptListView(ListView):
         context = super().get_context_data(**kwargs)
         context['categories'] = Category.objects.all()
         context['tags'] = Tag.objects.all()
+        context['collections'] = Collection.objects.all()
         context['current_sort'] = self.request.GET.get('sort', '-created_at')
         return context
 
@@ -165,11 +176,23 @@ class ImportPromptsView(FormView):
                         }
                     )
                     
+                    # Create or get collection if specified
+                    collection = None
+                    if 'collection' in item:
+                        collection, _ = Collection.objects.get_or_create(
+                            name=item['collection'],
+                            defaults={
+                                'description': f'Коллекция {item["collection"]}',
+                                'color': '#9b59b6'
+                            }
+                        )
+                    
                     # Create prompt
                     prompt = Prompt.objects.create(
                         title=item['title'],
                         content=item['content'],
-                        category=category
+                        category=category,
+                        collection=collection
                     )
                     
                     # Add tags
@@ -233,6 +256,45 @@ class IncrementUsageView(View):
             return JsonResponse({
                 'success': True,
                 'usage_count': prompt.usage_count
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+
+
+class GetPromptContentView(View):
+    """AJAX endpoint to get prompt content."""
+    
+    def get(self, request, pk):
+        """Get prompt content."""
+        try:
+            prompt = get_object_or_404(Prompt, pk=pk)
+            return JsonResponse({
+                'success': True,
+                'content': prompt.content,
+                'title': prompt.title
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+
+
+class ToggleFavoriteView(View):
+    """AJAX endpoint to toggle favorite status."""
+    
+    def post(self, request, pk):
+        """Toggle favorite status."""
+        try:
+            prompt = get_object_or_404(Prompt, pk=pk)
+            prompt.is_favorite = not prompt.is_favorite
+            prompt.save(update_fields=['is_favorite'])
+            return JsonResponse({
+                'success': True,
+                'is_favorite': prompt.is_favorite
             })
         except Exception as e:
             return JsonResponse({
