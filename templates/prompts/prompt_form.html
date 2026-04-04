@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-md-8 offset-md-2">
+    <div class="col-md-10 offset-md-1">
         <h1>
             <i class="fas fa-{% if form.instance.pk %}edit{% else %}plus{% endif %}"></i>
             {% if form.instance.pk %}Редактировать промпт{% else %}Создать новый промпт{% endif %}
@@ -48,20 +48,56 @@
                                 {{ form.content.errors }}
                             </div>
                         {% endif %}
-                        <small class="text-muted">Минимум 10 символов</small>
+                        <small class="text-muted d-block">
+                            Минимум 10 символов. Используйте <code>{{переменная}}</code> для создания шаблонов.
+                        </small>
                     </div>
 
-                    <!-- Category -->
+                    <div class="row">
+                        <!-- Category -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">
+                                    Категория
+                                </label>
+                                {{ form.category }}
+                                {% if form.category.errors %}
+                                    <div class="text-danger small">
+                                        {{ form.category.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- New Category -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.new_category.id_for_label }}" class="form-label">
+                                    {{ form.new_category.label }}
+                                </label>
+                                {{ form.new_category }}
+                                {% if form.new_category.errors %}
+                                    <div class="text-danger small">
+                                        {{ form.new_category.errors }}
+                                    </div>
+                                {% endif %}
+                                <small class="text-muted d-block">{{ form.new_category.help_text }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Collection -->
                     <div class="mb-3">
-                        <label for="{{ form.category.id_for_label }}" class="form-label">
-                            Категория
+                        <label for="{{ form.collection.id_for_label }}" class="form-label">
+                            Коллекция (папка)
                         </label>
-                        {{ form.category }}
-                        {% if form.category.errors %}
+                        {{ form.collection }}
+                        {% if form.collection.errors %}
                             <div class="text-danger small">
-                                {{ form.category.errors }}
+                                {{ form.collection.errors }}
                             </div>
                         {% endif %}
+                        <small class="text-muted d-block">Опционально: организуйте промпты по папкам</small>
                     </div>
 
                     <!-- Tags -->
@@ -69,7 +105,7 @@
                         <label class="form-label">Теги</label>
                         <div class="row">
                             {% for checkbox in form.tags %}
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="form-check">
                                         {{ checkbox.tag }}
                                         <label class="form-check-label" for="{{ checkbox.id_for_label }}">
@@ -81,9 +117,23 @@
                         </div>
                     </div>
 
+                    <!-- New Tags -->
+                    <div class="mb-3">
+                        <label for="{{ form.new_tags.id_for_label }}" class="form-label">
+                            {{ form.new_tags.label }}
+                        </label>
+                        {{ form.new_tags }}
+                        {% if form.new_tags.errors %}
+                            <div class="text-danger small">
+                                {{ form.new_tags.errors }}
+                            </div>
+                        {% endif %}
+                        <small class="text-muted d-block">{{ form.new_tags.help_text }}</small>
+                    </div>
+
                     <!-- AI Models -->
                     <div class="mb-3">
-                        <label class="form-label">AI Модели *</label>
+                        <label class="form-label">AI Модели</label>
                         <div class="row">
                             {% for checkbox in form.ai_models %}
                                 <div class="col-md-4">
@@ -96,12 +146,30 @@
                                 </div>
                             {% endfor %}
                         </div>
-                        {% if form.ai_models.errors %}
+                    </div>
+
+                    <!-- New AI Models -->
+                    <div class="mb-3">
+                        <label for="{{ form.new_ai_models.id_for_label }}" class="form-label">
+                            {{ form.new_ai_models.label }}
+                        </label>
+                        {{ form.new_ai_models }}
+                        {% if form.new_ai_models.errors %}
                             <div class="text-danger small">
-                                {{ form.ai_models.errors }}
+                                {{ form.new_ai_models.errors }}
                             </div>
                         {% endif %}
-                        <small class="text-muted">Выберите хотя бы одну модель</small>
+                        <small class="text-muted d-block">{{ form.new_ai_models.help_text }}</small>
+                    </div>
+
+                    <!-- Favorite -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_favorite }}
+                            <label class="form-check-label" for="{{ form.is_favorite.id_for_label }}">
+                                <i class="fas fa-star text-warning"></i> Добавить в избранное
+                            </label>
+                        </div>
                     </div>
 
                     <!-- Buttons -->
