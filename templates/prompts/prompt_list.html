@@ -5,13 +5,8 @@
 
 {% block content %}
 <div class="row mb-4">
-    <div class="col-md-8">
+    <div class="col-md-12">
         <h1><i class="fas fa-list"></i> Все промпты</h1>
-    </div>
-    <div class="col-md-4 text-end">
-        <a href="{% url 'prompt_create' %}" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Создать промпт
-        </a>
     </div>
 </div>
 
@@ -22,7 +17,7 @@
             <div class="card-body">
                 <form method="get" class="row g-3">
                     <!-- Search -->
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label">Поиск</label>
                         <input type="text" name="search" class="form-control" 
                                placeholder="Поиск по названию..." 
@@ -30,7 +25,7 @@
                     </div>
                     
                     <!-- Category Filter -->
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Категория</label>
                         <select name="category" class="form-select">
                             <option value="">Все категории</option>
@@ -44,7 +39,7 @@
                     </div>
                     
                     <!-- Tag Filter -->
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Тег</label>
                         <select name="tag" class="form-select">
                             <option value="">Все теги</option>
@@ -57,12 +52,27 @@
                         </select>
                     </div>
                     
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Применить фильтры
+                    <!-- Sort -->
+                    <div class="col-md-2">
+                        <label class="form-label">Сортировка</label>
+                        <select name="sort" class="form-select">
+                            <option value="-created_at" {% if current_sort == "-created_at" %}selected{% endif %}>Новые первые</option>
+                            <option value="created_at" {% if current_sort == "created_at" %}selected{% endif %}>Старые первые</option>
+                            <option value="-usage_count" {% if current_sort == "-usage_count" %}selected{% endif %}>Популярные</option>
+                            <option value="usage_count" {% if current_sort == "usage_count" %}selected{% endif %}>Непопулярные</option>
+                            <option value="title" {% if current_sort == "title" %}selected{% endif %}>По алфавиту</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Применить
                         </button>
+                    </div>
+                    
+                    <div class="col-12">
                         <a href="{% url 'prompt_list' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times"></i> Сбросить
+                            <i class="fas fa-times"></i> Сбросить фильтры
                         </a>
                     </div>
                 </form>
@@ -76,8 +86,14 @@
     {% for prompt in prompts %}
     <div class="col-md-4 mb-4">
         <div class="card h-100 shadow-sm">
-            <div class="card-header" style="background-color: {{ prompt.category.color }}; color: white;">
+            <div class="card-header d-flex justify-content-between align-items-center" 
+                 style="background-color: {{ prompt.category.color }}; color: white;">
                 <h5 class="card-title mb-0">{{ prompt.title }}</h5>
+                <button class="btn btn-sm btn-light" 
+                        onclick="toggleFavorite({{ prompt.pk }}, this)"
+                        title="Добавить в избранное">
+                    <i class="fas fa-star {% if prompt.is_favorite %}text-warning{% else %}text-muted{% endif %}"></i>
+                </button>
             </div>
             <div class="card-body">
                 <p class="card-text text-muted">
@@ -92,20 +108,35 @@
                 </div>
                 
                 <!-- AI Models -->
-                <div class="small text-muted">
+                <div class="small text-muted mb-2">
                     <i class="fas fa-robot"></i>
                     {% for model in prompt.ai_models.all %}
                         {{ model.name }}{% if not forloop.last %}, {% endif %}
                     {% endfor %}
                 </div>
+                
+                <!-- Collection -->
+                {% if prompt.collection %}
+                <div class="small">
+                    <span class="badge" style="background-color: {{ prompt.collection.color }};">
+                        <i class="fas fa-folder"></i> {{ prompt.collection.name }}
+                    </span>
+                </div>
+                {% endif %}
             </div>
             <div class="card-footer bg-white">
-                <div class="d-flex justify-content-between">
-                    <a href="{% url 'prompt_detail' prompt.pk %}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-eye"></i> Просмотр
-                    </a>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <a href="{% url 'prompt_detail' prompt.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i> Просмотр
+                        </a>
+                        <button class="btn btn-sm btn-outline-success" 
+                                onclick="copyPromptFromList({{ prompt.pk }}, this)">
+                            <i class="fas fa-copy"></i> Копировать
+                        </button>
+                    </div>
                     <small class="text-muted">
-                        <i class="fas fa-copy"></i> {{ prompt.usage_count }}
+                        <i class="fas fa-copy"></i> <span id="usage-count-{{ prompt.pk }}">{{ prompt.usage_count }}</span>
                     </small>
                 </div>
             </div>
@@ -149,4 +180,85 @@
     </ul>
 </nav>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function copyPromptFromList(promptId, button) {
+    // Get prompt content via AJAX first
+    fetch(`/api/prompt/${promptId}/content/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Copy to clipboard
+                navigator.clipboard.writeText(data.content).then(() => {
+                    // Increment usage counter
+                    const csrftoken = getCookie('csrftoken');
+                    fetch(`/prompt/${promptId}/increment/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrftoken,
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById(`usage-count-${promptId}`).textContent = data.usage_count;
+                            button.innerHTML = '<i class="fas fa-check"></i> Скопировано';
+                            setTimeout(() => {
+                                button.innerHTML = '<i class="fas fa-copy"></i> Копировать';
+                            }, 2000);
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при копировании промпта');
+        });
+}
+
+function toggleFavorite(promptId, button) {
+    const csrftoken = getCookie('csrftoken');
+    fetch(`/prompt/${promptId}/toggle-favorite/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const icon = button.querySelector('i');
+            if (data.is_favorite) {
+                icon.classList.remove('text-muted');
+                icon.classList.add('text-warning');
+            } else {
+                icon.classList.remove('text-warning');
+                icon.classList.add('text-muted');
+            }
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
 {% endblock %}
