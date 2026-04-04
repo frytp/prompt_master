@@ -1,6 +1,7 @@
 """
 Models for Prompt Manager application.
 """
+
 from django.db import models
 from django.core.validators import MinLengthValidator
 
@@ -84,6 +85,36 @@ class AIModel(models.Model):
         return self.name
 
 
+class Collection(models.Model):
+    """Collection (folder) for organizing prompts."""
+    
+    name = models.CharField(
+        max_length=200,
+        verbose_name="Название коллекции"
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name="Описание"
+    )
+    color = models.CharField(
+        max_length=7,
+        default="#9b59b6",
+        verbose_name="Цвет (hex)"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Дата создания"
+    )
+
+    class Meta:
+        verbose_name = "Коллекция"
+        verbose_name_plural = "Коллекции"
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class Prompt(models.Model):
     """Main model for storing prompt templates."""
     
@@ -104,6 +135,14 @@ class Prompt(models.Model):
         related_name='prompts',
         verbose_name="Категория"
     )
+    collection = models.ForeignKey(
+        Collection,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='prompts',
+        verbose_name="Коллекция"
+    )
     tags = models.ManyToManyField(
         Tag,
         related_name='prompts',
@@ -120,6 +159,10 @@ class Prompt(models.Model):
         default=False,
         verbose_name="Предустановленный",
         help_text="Промпт по умолчанию (нельзя удалить)"
+    )
+    is_favorite = models.BooleanField(
+        default=False,
+        verbose_name="Избранное"
     )
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -146,3 +189,33 @@ class Prompt(models.Model):
         """Increment usage counter when prompt is copied."""
         self.usage_count += 1
         self.save(update_fields=['usage_count'])
+
+
+class PromptVariable(models.Model):
+    """Store variable substitutions history for prompts."""
+    
+    prompt = models.ForeignKey(
+        Prompt,
+        on_delete=models.CASCADE,
+        related_name='variables',
+        verbose_name="Промпт"
+    )
+    variable_name = models.CharField(
+        max_length=100,
+        verbose_name="Название переменной"
+    )
+    value = models.TextField(
+        verbose_name="Значение"
+    )
+    used_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Дата использования"
+    )
+
+    class Meta:
+        verbose_name = "Переменная промпта"
+        verbose_name_plural = "Переменные промптов"
+        ordering = ['-used_at']
+
+    def __str__(self):
+        return f"{self.prompt.title} - {self.variable_name}"
