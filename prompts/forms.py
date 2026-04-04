@@ -1,13 +1,15 @@
 """
-Forms for Prompt Manager application.
+Forms for creating and editing prompts.
 """
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Prompt, Category, Tag, AIModel
+import json
+from .models import Prompt
+from .constants import MAX_JSON_FILE_SIZE, MIN_TITLE_LENGTH, MIN_CONTENT_LENGTH
 
 
 class PromptForm(forms.ModelForm):
-    """Form for creating and editing prompts."""
+    """Form for creating and editing prompt instances."""
     
     class Meta:
         model = Prompt
@@ -20,7 +22,7 @@ class PromptForm(forms.ModelForm):
             'content': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 10,
-                'placeholder': 'Введите текст промпта (минимум 10 символов)'
+                'placeholder': f'Введите текст промпта (минимум {MIN_CONTENT_LENGTH} символов)'
             }),
             'category': forms.Select(attrs={
                 'class': 'form-select'
@@ -30,46 +32,52 @@ class PromptForm(forms.ModelForm):
         }
     
     def clean_title(self):
-        """Validate title field."""
-        title = self.cleaned_data.get('title')
-        if not title:
+        """Validate prompt title."""
+        title_value = self.cleaned_data.get('title', '').strip()
+        
+        if not title_value:
             raise ValidationError('Название не может быть пустым')
-        if len(title) < 3:
+        
+        if len(title_value) < MIN_TITLE_LENGTH:
             raise ValidationError(
-                'Название слишком короткое (минимум 3 символа)'
+                f'Название слишком короткое (минимум {MIN_TITLE_LENGTH} символа)'
             )
-        return title
+        
+        return title_value
     
     def clean_content(self):
-        """Validate content field."""
-        content = self.cleaned_data.get('content')
-        if not content:
+        """Validate prompt content."""
+        content_value = self.cleaned_data.get('content', '').strip()
+        
+        if not content_value:
             raise ValidationError('Текст промпта не может быть пустым')
-        if len(content) < 10:
+        
+        if len(content_value) < MIN_CONTENT_LENGTH:
             raise ValidationError(
-                'Текст промпта слишком короткий (минимум 10 символов)'
+                f'Текст промпта слишком короткий (минимум {MIN_CONTENT_LENGTH} символов)'
             )
-        return content
+        
+        return content_value
     
     def clean(self):
-        """Additional form-level validation."""
+        """Perform form-level validation."""
         cleaned_data = super().clean()
-        ai_models = cleaned_data.get('ai_models')
+        selected_models = cleaned_data.get('ai_models')
         
-        # Проверка что выбрана хотя бы одна AI модель
-        if not ai_models or ai_models.count() == 0:
+        if not selected_models or selected_models.count() == 0:
             raise ValidationError(
                 'Выберите хотя бы одну AI модель для промпта'
             )
         
         return cleaned_data
-        
+
+
 class ImportPromptsForm(forms.Form):
     """Form for importing prompts from JSON file."""
     
     json_file = forms.FileField(
         label='JSON файл',
-        help_text='Загрузите файл с промптами в формате JSON (макс. 5 МБ)',
+        help_text=f'Загрузите файл с промптами в формате JSON (макс. {MAX_JSON_FILE_SIZE // (1024 * 1024)} МБ)',
         widget=forms.FileInput(attrs={
             'class': 'form-control',
             'accept': '.json'
@@ -83,11 +91,10 @@ class ImportPromptsForm(forms.Form):
         if not uploaded_file:
             raise ValidationError('Файл не загружен')
         
-        # Check file size (5 MB max)
-        max_size = 5 * 1024 * 1024  # 5 MB
-        if uploaded_file.size > max_size:
+        # Check file size
+        if uploaded_file.size > MAX_JSON_FILE_SIZE:
             raise ValidationError(
-                f'Файл слишком большой. Максимальный размер: 5 МБ'
+                f'Файл слишком большой. Максимальный размер: {MAX_JSON_FILE_SIZE // (1024 * 1024)} МБ'
             )
         
         # Check file extension
