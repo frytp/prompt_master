@@ -4,16 +4,47 @@ Forms for creating and editing prompts.
 from django import forms
 from django.core.exceptions import ValidationError
 import json
-from .models import Prompt
+from .models import Prompt, Category, Tag, AIModel, Collection
 from .constants import MAX_JSON_FILE_SIZE, MIN_TITLE_LENGTH, MIN_CONTENT_LENGTH
 
 
 class PromptForm(forms.ModelForm):
     """Form for creating and editing prompt instances."""
     
+    # Fields for creating new tags/models/categories on the fly
+    new_tags = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите новые теги через запятую'
+        }),
+        label='Новые теги',
+        help_text='Введите теги через запятую, например: важное, срочное'
+    )
+    
+    new_ai_models = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите новые AI модели через запятую'
+        }),
+        label='Новые AI модели',
+        help_text='Введите модели через запятую, например: GPT-4, Claude 3'
+    )
+    
+    new_category = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Название новой категории'
+        }),
+        label='Новая категория',
+        help_text='Если нужной категории нет в списке'
+    )
+    
     class Meta:
         model = Prompt
-        fields = ['title', 'content', 'category', 'tags', 'ai_models']
+        fields = ['title', 'content', 'category', 'collection', 'tags', 'ai_models', 'is_favorite']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -22,13 +53,19 @@ class PromptForm(forms.ModelForm):
             'content': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 10,
-                'placeholder': f'Введите текст промпта (минимум {MIN_CONTENT_LENGTH} символов)'
+                'placeholder': f'Введите текст промпта (минимум {MIN_CONTENT_LENGTH} символов)\nИспользуйте {{переменная}} для создания шаблонов'
             }),
             'category': forms.Select(attrs={
                 'class': 'form-select'
             }),
+            'collection': forms.Select(attrs={
+                'class': 'form-select'
+            }),
             'tags': forms.CheckboxSelectMultiple(),
             'ai_models': forms.CheckboxSelectMultiple(),
+            'is_favorite': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
         }
     
     def clean_title(self):
@@ -59,17 +96,51 @@ class PromptForm(forms.ModelForm):
         
         return content_value
     
-    def clean(self):
-        """Perform form-level validation."""
-        cleaned_data = super().clean()
-        selected_models = cleaned_data.get('ai_models')
+    def save(self, commit=True):
+        """Save form and handle new tags/models/categories."""
+        instance = super().save(commit=False)
         
-        if not selected_models or selected_models.count() == 0:
-            raise ValidationError(
-                'Выберите хотя бы одну AI модель для промпта'
+        # Handle new category
+        new_category_name = self.cleaned_data.get('new_category', '').strip()
+        if new_category_name:
+            category, _ = Category.objects.get_or_create(
+                name=new_category_name,
+                defaults={
+                    'description': f'Категория {new_category_name}',
+                    'color': '#3498db'
+                }
             )
+            instance.category = category
         
-        return cleaned_data
+        if commit:
+            instance.save()
+        
+        # Save M2M relationships
+        self.save_m2m()
+        
+        # Handle new tags
+        new_tags_str = self.cleaned_data.get('new_tags', '').strip()
+        if new_tags_str:
+            new_tag_names = [t.strip() for t in new_tags_str.split(',') if t.strip()]
+            for tag_name in new_tag_names:
+                tag, _ = Tag.objects.get_or_create(
+                    name=tag_name,
+                    defaults={'description': f'Тег {tag_name}'}
+                )
+                instance.tags.add(tag)
+        
+        # Handle new AI models
+        new_models_str = self.cleaned_data.get('new_ai_models', '').strip()
+        if new_models_str:
+            new_model_names = [m.strip() for m in new_models_str.split(',') if m.strip()]
+            for model_name in new_model_names:
+                model, _ = AIModel.objects.get_or_create(
+                    name=model_name,
+                    defaults={'description': f'AI модель {model_name}'}
+                )
+                instance.ai_models.add(model)
+        
+        return instance
 
 
 class ImportPromptsForm(forms.Form):
@@ -81,6 +152,16 @@ class ImportPromptsForm(forms.Form):
         widget=forms.FileInput(attrs={
             'class': 'form-control',
             'accept': '.json'
+        })
+    )
+    
+    collection_name = forms.CharField(
+        required=False,
+        label='Название коллекции',
+        help_text='Опционально: все импортированные промпты будут помещены в эту коллекцию',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Например: Промпты от пользователя X'
         })
     )
     
