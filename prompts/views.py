@@ -4,11 +4,13 @@ from django.views.generic import (
     CreateView, 
     UpdateView, 
     DeleteView,
-    FormView
+    FormView,
+    View
 )
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
+from django.http import JsonResponse
 import json
 from .models import Prompt, Category, Tag, AIModel
 from .forms import PromptForm, ImportPromptsForm
@@ -48,6 +50,11 @@ class PromptListView(ListView):
         if tag_id:
             base_queryset = base_queryset.filter(tags__id=tag_id)
         
+        # Sorting
+        sort_by = self.request.GET.get('sort', '-created_at')
+        if sort_by in ['-created_at', 'created_at', '-usage_count', 'usage_count', 'title']:
+            base_queryset = base_queryset.order_by(sort_by)
+        
         return base_queryset
     
     def get_context_data(self, **kwargs):
@@ -55,6 +62,7 @@ class PromptListView(ListView):
         context = super().get_context_data(**kwargs)
         context['categories'] = Category.objects.all()
         context['tags'] = Tag.objects.all()
+        context['current_sort'] = self.request.GET.get('sort', '-created_at')
         return context
 
 
@@ -212,3 +220,22 @@ class ImportPromptsView(FormView):
             )
         
         return super().form_valid(form)
+
+
+class IncrementUsageView(View):
+    """AJAX endpoint to increment prompt usage counter."""
+    
+    def post(self, request, pk):
+        """Increment usage count for prompt."""
+        try:
+            prompt = get_object_or_404(Prompt, pk=pk)
+            prompt.increment_usage()
+            return JsonResponse({
+                'success': True,
+                'usage_count': prompt.usage_count
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)

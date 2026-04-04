@@ -31,7 +31,7 @@
                     <i class="fas fa-copy"></i> Скопировать в буфер обмена
                 </button>
                 <small class="text-muted ms-3">
-                    Использовано: {{ prompt.usage_count }} раз
+                    Использовано: <span id="usage-count">{{ prompt.usage_count }}</span> раз
                 </small>
             </div>
         </div>
@@ -88,11 +88,42 @@
 
 {% block extra_js %}
 <script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 function copyToClipboard() {
     const text = `{{ prompt.content|escapejs }}`;
     navigator.clipboard.writeText(text).then(() => {
+        // Increment usage counter via AJAX
+        const csrftoken = getCookie('csrftoken');
+        fetch('{% url "prompt_increment" prompt.pk %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('usage-count').textContent = data.usage_count;
+            }
+        })
+        .catch(error => console.error('Error:', error));
+        
         alert('Промпт скопирован в буфер обмена!');
-        // Increment usage counter via AJAX (optional - можно добавить позже)
     });
 }
 </script>
