@@ -1,0 +1,28 @@
+[MASTER]
+disable=
+    C0114,  # missing-module-docstring
+    C0115,  # missing-class-docstring
+    C0116,  # missing-function-docstring
+    R0903,  # too-few-public-methods (for Django models)
+    W0212,  # protected-access
+    C0103,  # invalid-name (for Django conventions)
+    R0801,  # duplicate-code
+
+max-line-length=100
+
+[FORMAT]
+max-module-lines=1000
+
+[DESIGN]
+max-args=7
+max-attributes=10
+max-locals=15
+
+[MESSAGES CONTROL]
+enable=
+    useless-suppression
+
+[REPORTS]
+output-format=text
+reports=no
+score=yes
