@@ -8,7 +8,7 @@ from django.core.validators import MinLengthValidator
 
 class Category(models.Model):
     """Category for organizing prompts (e.g., Education, Programming)."""
-    
+
     name = models.CharField(
         max_length=100,
         unique=True,
@@ -36,7 +36,7 @@ class Category(models.Model):
 
 class Tag(models.Model):
     """Tag for categorizing prompts (e.g., explanation, code, translation)."""
-    
+
     name = models.CharField(
         max_length=50,
         unique=True,
@@ -58,7 +58,7 @@ class Tag(models.Model):
 
 class AIModel(models.Model):
     """AI model that can use prompts (e.g., ChatGPT, Claude)."""
-    
+
     name = models.CharField(
         max_length=100,
         unique=True,
@@ -87,7 +87,7 @@ class AIModel(models.Model):
 
 class Collection(models.Model):
     """Collection (folder) for organizing prompts."""
-    
+
     name = models.CharField(
         max_length=200,
         verbose_name="Название коллекции"
@@ -117,7 +117,7 @@ class Collection(models.Model):
 
 class Prompt(models.Model):
     """Main model for storing prompt templates."""
-    
+
     title = models.CharField(
         max_length=200,
         verbose_name="Название",
@@ -193,7 +193,7 @@ class Prompt(models.Model):
 
 class PromptVariable(models.Model):
     """Store variable substitutions history for prompts."""
-    
+
     prompt = models.ForeignKey(
         Prompt,
         on_delete=models.CASCADE,

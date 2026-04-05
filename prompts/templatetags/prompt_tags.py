@@ -11,7 +11,7 @@ register = template.Library()
 def url_with_params(context, **kwargs):
     """
     Generate URL with current query parameters plus new ones.
-    
+
     Usage: {% url_with_params page=2 %}
     """
     query = context['request'].GET.copy()
@@ -24,11 +24,11 @@ def url_with_params(context, **kwargs):
 def pagination_url(context, page_num):
     """
     Generate pagination URL preserving filters.
-    
+
     Args:
         context: Template context
         page_num: Page number to navigate to
-        
+
     Returns:
         str: URL with pagination and filters
     """
@@ -41,7 +41,7 @@ def pagination_url(context, page_num):
 def get_item(dictionary, key):
     """
     Get item from dictionary by key.
-    
+
     Usage: {{ dict|get_item:key }}
     """
     return dictionary.get(key)
