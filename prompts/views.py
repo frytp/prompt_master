@@ -12,6 +12,7 @@ from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404
 from django.http import JsonResponse
 import json
+import re
 from .models import Prompt, Category, Tag, AIModel, Collection
 from .forms import PromptForm, ImportPromptsForm
 
@@ -243,6 +244,207 @@ class ImportPromptsView(FormView):
             )
         
         return super().form_valid(form)
+
+
+class IncrementUsageView(View):
+    """AJAX endpoint to increment prompt usage counter."""
+    
+    def post(self, request, pk):
+        """Increment usage count for prompt."""
+        try:
+            prompt = get_object_or_404(Prompt, pk=pk)
+            prompt.increment_usage()
+            return JsonResponse({
+                'success': True,
+                'usage_count': prompt.usage_count
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+
+
+class GetPromptContentView(View):
+    """AJAX endpoint to get prompt content."""
+    
+    def get(self, request, pk):
+        """Get prompt content."""
+        try:
+            prompt = get_object_or_404(Prompt, pk=pk)
+            return JsonResponse({
+                'success': True,
+                'content': prompt.content,
+                'title': prompt.title
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+
+
+class ToggleFavoriteView(View):
+    """AJAX endpoint to toggle favorite status."""
+    
+    def post(self, request, pk):
+        """Toggle favorite status."""
+        try:
+            prompt = get_object_or_404(Prompt, pk=pk)
+            prompt.is_favorite = not prompt.is_favorite
+            prompt.save(update_fields=['is_favorite'])
+            return JsonResponse({
+                'success': True,
+                'is_favorite': prompt.is_favorite
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+class ProcessPromptVariablesView(View):
+    """Handle prompt variable substitution with history."""
+    
+    def get(self, request, pk):
+        """Display form for variable substitution."""
+        prompt = get_object_or_404(Prompt, pk=pk)
+        
+        # Extract variables from prompt content
+        variables = re.findall(r'\{\{(\w+)\}\}', prompt.content)
+        unique_variables = list(set(variables))
+        
+        # Get previous values for each variable
+        previous_values = {}
+        for var_name in unique_variables:
+            recent_uses = PromptVariable.objects.filter(
+                prompt=prompt,
+                variable_name=var_name
+            ).order_by('-used_at')[:5]
+            previous_values[var_name] = [pv.value for pv in recent_uses]
+        
+        context = {
+            'prompt': prompt,
+            'variables': unique_variables,
+            'previous_values': previous_values
+        }
+        
+        return render(request, 'prompts/process_variables.html', context)
+    
+    def post(self, request, pk):
+        """Process variable substitution and save to history."""
+        prompt = get_object_or_404(Prompt, pk=pk)
+        
+        # Get variable values from POST data
+        processed_content = prompt.content
+        variables_used = []
+        
+        for key, value in request.POST.items():
+            if key.startswith('var_') and value.strip():
+                var_name = key[4:]  # Remove 'var_' prefix
+                placeholder = f'{{{{{var_name}}}}}'
+                processed_content = processed_content.replace(placeholder, value.strip())
+                
+                # Save to history
+                PromptVariable.objects.create(
+                    prompt=prompt,
+                    variable_name=var_name,
+                    value=value.strip()
+                )
+                variables_used.append(var_name)
+        
+        # Return JSON response for AJAX
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'processed_content': processed_content
+            })
+        
+        # Or render template
+        context = {
+            'prompt': prompt,
+            'processed_content': processed_content,
+            'variables_used': variables_used
+        }
+        return render(request, 'prompts/processed_result.html', context)
+
+
+class PromptStatisticsView(TemplateView):
+    """Display statistics about prompt usage."""
+    
+    template_name = 'prompts/statistics.html'
+    
+    def get_context_data(self, **kwargs):
+        """Add statistics to context."""
+        context = super().get_context_data(**kwargs)
+        
+        # Total prompts
+        context['total_prompts'] = Prompt.objects.count()
+        
+        # Most used prompts
+        context['most_used'] = Prompt.objects.order_by('-usage_count')[:10]
+        
+        # Category statistics
+        category_stats = []
+        for category in Category.objects.all():
+            prompts_in_category = category.prompts.all()
+            total_usage = sum(p.usage_count for p in prompts_in_category)
+            category_stats.append({
+                'category': category,
+                'count': prompts_in_category.count(),
+                'total_usage': total_usage,
+                'avg_usage': total_usage / prompts_in_category.count() if prompts_in_category.count() > 0 else 0
+            })
+        
+        # Sort by total usage
+        category_stats.sort(key=lambda x: x['total_usage'], reverse=True)
+        context['category_stats'] = category_stats
+        
+        # Tag statistics
+        tag_stats = []
+        for tag in Tag.objects.all():
+            prompts_with_tag = tag.prompts.all()
+            total_usage = sum(p.usage_count for p in prompts_with_tag)
+            tag_stats.append({
+                'tag': tag,
+                'count': prompts_with_tag.count(),
+                'total_usage': total_usage
+            })
+        
+        tag_stats.sort(key=lambda x: x['total_usage'], reverse=True)
+        context['tag_stats'] = tag_stats[:10]
+        
+        # AI Model statistics
+        model_stats = []
+        for model in AIModel.objects.all():
+            prompts_for_model = model.prompts.all()
+            total_usage = sum(p.usage_count for p in prompts_for_model)
+            model_stats.append({
+                'model': model,
+                'count': prompts_for_model.count(),
+                'total_usage': total_usage
+            })
+        
+        model_stats.sort(key=lambda x: x['total_usage'], reverse=True)
+        context['model_stats'] = model_stats
+        
+        # Favorites count
+        context['favorites_count'] = Prompt.objects.filter(is_favorite=True).count()
+        
+        # Collections statistics
+        collection_stats = []
+        for collection in Collection.objects.all():
+            prompts_in_collection = collection.prompts.all()
+            total_usage = sum(p.usage_count for p in prompts_in_collection)
+            collection_stats.append({
+                'collection': collection,
+                'count': prompts_in_collection.count(),
+                'total_usage': total_usage
+            })
+        
+        collection_stats.sort(key=lambda x: x['total_usage'], reverse=True)
+        context['collection_stats'] = collection_stats
+        
+        return context
 
 
 class IncrementUsageView(View):

@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}Заполнить переменные - {{ prompt.title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h1><i class="fas fa-edit"></i> Заполнить переменные</h1>
+        <p class="text-muted">Промпт: <strong>{{ prompt.title }}</strong></p>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Оригинальный промпт</h5>
+            </div>
+            <div class="card-body">
+                <pre class="bg-light p-3 rounded">{{ prompt.content }}</pre>
+            </div>
+        </div>
+
+        <form method="post" id="variables-form">
+            {% csrf_token %}
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Заполните переменные</h5>
+                </div>
+                <div class="card-body">
+                    {% for var in variables %}
+                    <div class="mb-3">
+                        <label for="var_{{ var }}" class="form-label">
+                            <code>{{ var }}</code>
+                        </label>
+                        
+                        {% if var in previous_values and previous_values|get_item:var %}
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="var_{{ var }}" 
+                                   name="var_{{ var }}"
+                                   list="datalist_{{ var }}"
+                                   placeholder="Введите значение для {{ var }}">
+                            <datalist id="datalist_{{ var }}">
+                                {% for prev_val in previous_values|get_item:var %}
+                                    <option value="{{ prev_val }}">
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                        <small class="text-muted">
+                            Ранее использованные значения:
+                            {% for prev_val in previous_values|get_item:var %}
+                                <span class="badge bg-secondary cursor-pointer" 
+                                      onclick="document.getElementById('var_{{ var }}').value = '{{ prev_val|escapejs }}'">
+                                    {{ prev_val|truncatechars:30 }}
+                                </span>
+                            {% endfor %}
+                        </small>
+                        {% else %}
+                        <input type="text" 
+                               class="form-control" 
+                               id="var_{{ var }}" 
+                               name="var_{{ var }}"
+                               placeholder="Введите значение для {{ var }}">
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Результат</h5>
+                </div>
+                <div class="card-body">
+                    <pre id="result-preview" class="bg-light p-3 rounded">{{ prompt.content }}</pre>
+                    <button type="button" class="btn btn-success mt-3" onclick="copyResult()">
+                        <i class="fas fa-copy"></i> Скопировать результат
+                    </button>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'prompt_detail' prompt.pk %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Назад
+                </a>
+                <button type="button" class="btn btn-primary" onclick="updatePreview()">
+                    <i class="fas fa-sync"></i> Обновить превью
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let originalContent = `{{ prompt.content|escapejs }}`;
+
+function updatePreview() {
+    let content = originalContent;
+    const form = document.getElementById('variables-form');
+    const formData = new FormData(form);
+    
+    for (let [key, value] of formData.entries()) {
+        if (key.startsWith('var_') && value.trim()) {
+            const varName = key.substring(4);
+            const placeholder = `{{${varName}}}`;
+            content = content.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+        }
+    }
+    
+    document.getElementById('result-preview').textContent = content;
+}
+
+function copyResult() {
+    const resultText = document.getElementById('result-preview').textContent;
+    navigator.clipboard.writeText(resultText).then(() => {
+        // Save variables to history via AJAX
+        const form = document.getElementById('variables-form');
+        const formData = new FormData(form);
+        
+        fetch('{% url "prompt_variables" prompt.pk %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Increment usage counter
+                fetch('{% url "prompt_increment" prompt.pk %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                });
+            }
+        });
+        
+        alert('Промпт скопирован в буфер обмена!');
+    });
+}
+
+// Update preview on input change
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('input[name^="var_"]');
+    inputs.forEach(input => {
+        input.addEventListener('input', updatePreview);
+    });
+});
+</script>
+{% endblock %}

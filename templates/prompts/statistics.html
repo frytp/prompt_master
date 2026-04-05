@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+
+{% block title %}Статистика - Prompt Manager{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1><i class="fas fa-chart-bar"></i> Статистика использования</h1>
+    </div>
+</div>
+
+<!-- Overview Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h2 class="text-primary">{{ total_prompts }}</h2>
+                <p class="text-muted mb-0">Всего промптов</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h2 class="text-success">{{ most_used.0.usage_count|default:0 }}</h2>
+                <p class="text-muted mb-0">Макс. использований</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h2 class="text-warning">{{ favorites_count }}</h2>
+                <p class="text-muted mb-0">В избранном</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h2 class="text-info">{{ category_stats|length }}</h2>
+                <p class="text-muted mb-0">Категорий</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Most Used Prompts -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-fire"></i> Топ-10 популярных промптов</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Название</th>
+                                <th>Категория</th>
+                                <th>Использований</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prompt in most_used %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ prompt.title }}</td>
+                                <td>
+                                    <span class="badge" style="background-color: {{ prompt.category.color }};">
+                                        {{ prompt.category.name }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">{{ prompt.usage_count }}</span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'prompt_detail' prompt.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> Просмотр
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Нет данных</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Category Statistics -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-folder"></i> Статистика по категориям</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Категория</th>
+                                <th>Промптов</th>
+                                <th>Всего использований</th>
+                                <th>Среднее</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in category_stats %}
+                            <tr>
+                                <td>
+                                    <span class="badge" style="background-color: {{ stat.category.color }};">
+                                        {{ stat.category.name }}
+                                    </span>
+                                </td>
+                                <td>{{ stat.count }}</td>
+                                <td>{{ stat.total_usage }}</td>
+                                <td>{{ stat.avg_usage|floatformat:1 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Нет данных</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tag Statistics -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-tags"></i> Топ-10 тегов</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Тег</th>
+                                <th>Промптов</th>
+                                <th>Использований</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in tag_stats %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-secondary">{{ stat.tag.name }}</span>
+                                </td>
+                                <td>{{ stat.count }}</td>
+                                <td>{{ stat.total_usage }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">Нет данных</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Model Statistics -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-robot"></i> Статистика по AI моделям</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>AI Модель</th>
+                                <th>Промптов</th>
+                                <th>Использований</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in model_stats %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-primary">{{ stat.model.name }}</span>
+                                </td>
+                                <td>{{ stat.count }}</td>
+                                <td>{{ stat.total_usage }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">Нет данных</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collection Statistics -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-folder-open"></i> Статистика по коллекциям</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Коллекция</th>
+                                <th>Промптов</th>
+                                <th>Использований</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in collection_stats %}
+                            <tr>
+                                <td>
+                                    <span class="badge" style="background-color: {{ stat.collection.color }};">
+                                        {{ stat.collection.name }}
+                                    </span>
+                                </td>
+                                <td>{{ stat.count }}</td>
+                                <td>{{ stat.total_usage }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">Нет коллекций</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

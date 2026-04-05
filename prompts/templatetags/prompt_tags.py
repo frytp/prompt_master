@@ -35,3 +35,13 @@ def pagination_url(context, page_num):
     params = context['request'].GET.copy()
     params['page'] = page_num
     return '?' + urlencode(params)
+
+
+@register.filter
+def get_item(dictionary, key):
+    """
+    Get item from dictionary by key.
+    
+    Usage: {{ dict|get_item:key }}
+    """
+    return dictionary.get(key)
