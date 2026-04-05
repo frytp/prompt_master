@@ -7,7 +7,8 @@ disable=
     W0212,  # protected-access
     C0103,  # invalid-name (for Django conventions)
     R0801,  # duplicate-code
-
+load-plugins=pylint_django
+django-settings-module=prompt_manager.settings
 max-line-length=100
 
 [FORMAT]

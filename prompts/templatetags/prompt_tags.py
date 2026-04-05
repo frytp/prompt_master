@@ -1,8 +1,8 @@
 """
 Custom template tags for prompt management.
 """
-from django import template
 from urllib.parse import urlencode
+from django import template
 
 register = template.Library()
 
