@@ -152,6 +152,18 @@ class ImportPromptsView(FormView):
     def form_valid(self, form):
         """Process valid form and import prompts."""
         json_file = form.cleaned_data['json_file']
+        collection_name = form.cleaned_data.get('collection_name', '').strip()
+        
+        # Create or get collection if specified
+        collection = None
+        if collection_name:
+            collection, created = Collection.objects.get_or_create(
+                name=collection_name,
+                defaults={
+                    'description': f'Импортированная коллекция: {collection_name}',
+                    'color': '#9b59b6'
+                }
+            )
         
         try:
             # Read and parse JSON
@@ -178,10 +190,10 @@ class ImportPromptsView(FormView):
                         }
                     )
                     
-                    # Create or get collection if specified
-                    collection = None
-                    if 'collection' in item:
-                        collection, _ = Collection.objects.get_or_create(
+                    # Use collection from form or from JSON
+                    item_collection = collection
+                    if 'collection' in item and not collection_name:
+                        item_collection, _ = Collection.objects.get_or_create(
                             name=item['collection'],
                             defaults={
                                 'description': f'Коллекция {item["collection"]}',
@@ -194,7 +206,7 @@ class ImportPromptsView(FormView):
                         title=item['title'],
                         content=item['content'],
                         category=category,
-                        collection=collection
+                        collection=item_collection
                     )
                     
                     # Add tags
@@ -223,10 +235,10 @@ class ImportPromptsView(FormView):
             
             # Show result message
             if imported_count > 0:
-                messages.success(
-                    self.request,
-                    f'Успешно импортировано промптов: {imported_count}'
-                )
+                msg = f'Успешно импортировано промптов: {imported_count}'
+                if collection_name:
+                    msg += f' в коллекцию "{collection_name}"'
+                messages.success(self.request, msg)
             if skipped_count > 0:
                 messages.warning(
                     self.request,
@@ -245,8 +257,6 @@ class ImportPromptsView(FormView):
             )
         
         return super().form_valid(form)
-
-
 class IncrementUsageView(View):
     """AJAX endpoint to increment prompt usage counter."""
     
