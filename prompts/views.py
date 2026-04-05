@@ -5,7 +5,8 @@ from django.views.generic import (
     UpdateView, 
     DeleteView,
     FormView,
-    View
+    View,
+    TemplateView
 )
 from django.urls import reverse_lazy
 from django.contrib import messages
