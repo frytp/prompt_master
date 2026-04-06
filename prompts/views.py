@@ -47,20 +47,26 @@ class PromptListView(ListView):
                 title__icontains=search_term
             )
 
-        # Filter by multiple categories
-        category_ids = self.request.GET.getlist('category')
+        # Filter by multiple categories (fix for empty strings)
+        category_ids = [
+            cat_id for cat_id in self.request.GET.getlist('category')
+            if cat_id and cat_id.strip()
+        ]
         if category_ids:
             base_queryset = base_queryset.filter(category_id__in=category_ids)
 
-        # Filter by multiple tags
-        tag_ids = self.request.GET.getlist('tag')
+        # Filter by multiple tags (fix for empty strings)
+        tag_ids = [
+            tag_id for tag_id in self.request.GET.getlist('tag')
+            if tag_id and tag_id.strip()
+        ]
         if tag_ids:
             # Prompts must have ALL selected tags
             for tag_id in tag_ids:
                 base_queryset = base_queryset.filter(tags__id=tag_id)
 
         # Filter by collection
-        collection_id = self.request.GET.get('collection')
+        collection_id = self.request.GET.get('collection', '').strip()
         if collection_id:
             base_queryset = base_queryset.filter(collection_id=collection_id)
 
@@ -475,6 +481,41 @@ class ToggleFavoriteView(View):
                 'success': True,
                 'is_favorite': prompt.is_favorite
             })
+        except Exception as error:
+            return JsonResponse({
+                'success': False,
+                'error': str(error)
+            }, status=400)
+
+
+class AddToCollectionView(View):
+    """AJAX endpoint to add prompt to collection."""
+
+    def post(self, request, pk):
+        """Add prompt to collection."""
+        try:
+            prompt = get_object_or_404(Prompt, pk=pk)
+            data = json.loads(request.body)
+            collection_id = data.get('collection_id')
+
+            if collection_id:
+                collection = get_object_or_404(Collection, pk=collection_id)
+                prompt.collection = collection
+                prompt.save(update_fields=['collection'])
+                return JsonResponse({
+                    'success': True,
+                    'collection_name': collection.name,
+                    'collection_color': collection.color
+                })
+
+            # Remove from collection
+            prompt.collection = None
+            prompt.save(update_fields=['collection'])
+            return JsonResponse({
+                'success': True,
+                'collection_name': None
+            })
+
         except Exception as error:
             return JsonResponse({
                 'success': False,
