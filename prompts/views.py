@@ -20,7 +20,7 @@ from django.shortcuts import redirect, get_object_or_404, render
 from django.http import JsonResponse
 
 from .models import Prompt, Category, Tag, AIModel, Collection, PromptVariable
-from .forms import PromptForm, ImportPromptsForm
+from .forms import PromptForm, ImportPromptsForm, CollectionForm
 
 
 class PromptListView(ListView):
