@@ -1,0 +1,58 @@
+/* Основные настройки страницы */
+body {
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+/* Карточка промпта на главной */
+.prompt-card {
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.prompt-card:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+/* ИСПРАВЛЕНИЕ: Синие заголовки промптов */
+.prompt-card h5, 
+.prompt-card h5 a {
+    color: #0056b3 !important; /* Глубокий синий */
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.25rem;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.prompt-card h5 a:hover {
+    color: #003d7a !important;
+    text-decoration: underline;
+}
+
+/* Стили для текста внутри {переменных} */
+.variable-highlight {
+    color: #e83e8c; /* Розовый/красный для привлечения внимания */
+    background-color: #fdf2f7;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-weight: bold;
+}
+
+/* Боковая панель коллекций */
+.list-group-item.active {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.badge-pill {
+    font-size: 0.8rem;
+}

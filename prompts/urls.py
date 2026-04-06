@@ -61,4 +61,8 @@ urlpatterns = [
         views.GetPromptContentView.as_view(),
         name='api_prompt_content'
     ),
+    path(
+        'collections/create/',
+        views.CollectionCreateView.as_view(),
+        name='collection_create'),
 ]

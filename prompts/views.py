@@ -98,6 +98,13 @@ class PromptListView(ListView):
         return context
 
 
+class CollectionCreateView(CreateView):
+    model = Collection
+    form_class = CollectionForm
+    template_name = 'prompts/collection_form.html'
+    success_url = reverse_lazy('prompt_list')
+
+
 class PromptDetailView(DetailView):
     """Display detailed view of a single prompt."""
 
