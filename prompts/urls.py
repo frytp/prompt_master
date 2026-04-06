@@ -27,6 +27,11 @@ urlpatterns = [
         name='prompt_toggle_favorite'
     ),
     path(
+        'prompt/<int:pk>/add-to-collection/',
+        views.AddToCollectionView.as_view(),
+        name='prompt_add_to_collection'
+    ),
+    path(
         'prompt/create/',
         views.PromptCreateView.as_view(),
         name='prompt_create'
