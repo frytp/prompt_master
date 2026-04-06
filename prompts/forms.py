@@ -101,6 +101,15 @@ class PromptForm(forms.ModelForm):
                 'class': 'form-check-input'
             })
         }
+        
+    def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    # Делаем эти поля опциональными
+    self.fields['category'].required = False
+    self.fields['collection'].required = False
+    self.fields['tags'].required = False
+    self.fields['ai_models'].required = False
+
 
     def clean_title(self):
         """Validate prompt title."""
